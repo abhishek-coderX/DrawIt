@@ -12,15 +12,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useParams } from "next/navigation";
 
 const CURSOR_COLORS = [
-  "#ef4444", // Red
-  "#f97316", // Orange
-  "#f59e0b", // Amber
-  "#10b981", // Emerald
-  "#06b6d4", // Cyan
-  "#3b82f6", // Blue
-  "#6366f1", // Indigo
-  "#8b5cf6", // Violet
-  "#ec4899", // Pink
+  "#ef4444", 
+  "#f97316", 
+  "#f59e0b", 
+  "#10b981", 
+  "#06b6d4", 
+  "#3b82f6", 
+  "#6366f1", 
+  "#8b5cf6", 
+  "#ec4899", 
 ];
 
 function getRandomColor() {
@@ -108,7 +108,7 @@ export default function Canvas({ roomId, adminId }: Props) {
   const myColor = useRef(getRandomColor());
   const lastCursorSendRef = useRef(0);
 
-  // Fetch logged in user profile
+  
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -126,7 +126,7 @@ export default function Canvas({ roomId, adminId }: Props) {
   const handleCursorMove = useCallback(
     (x: number, y: number) => {
       const now = Date.now();
-      // Throttle outbound to ~30fps (~33ms)
+      
       if (now - lastCursorSendRef.current > 33) {
         lastCursorSendRef.current = now;
         broadcastCursor(x, y, userName, myColor.current);
@@ -135,7 +135,7 @@ export default function Canvas({ roomId, adminId }: Props) {
     [broadcastCursor, userName]
   );
 
-  // Load existing shapes from DB on mount
+  
   useEffect(() => {
     const load = async () => {
       try {
@@ -171,7 +171,7 @@ export default function Canvas({ roomId, adminId }: Props) {
     }
   }, [textInput]);
 
-  // Auto-close menu and clear textInput when tool changes
+  
   useEffect(() => {
     setIsMenuOpen(false);
     if (tool !== "text") {
@@ -308,7 +308,7 @@ export default function Canvas({ roomId, adminId }: Props) {
     ? (isMouseDown ? "grabbing" : "grab")
     : (tool === "select" ? "default" : tool === "eraser" ? "cell" : "crosshair");
 
-  // ── Zoom Controls ───────────────────────────────────────────
+  
   const handleZoom = (factor: number) => {
     const newScale = Math.min(Math.max(camera.scale * factor, 0.1), 10);
     const centerX = window.innerWidth / 2;
@@ -326,23 +326,23 @@ export default function Canvas({ roomId, adminId }: Props) {
     setCamera({ x: newX, y: newY, scale: 1 });
   };
 
-  // ── Image Exporter ──────────────────────────────────────────
+  
   const handleExport = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Build temporary canvas to bake background color + grid shapes together
+    
     const tempCanvas = document.createElement("canvas");
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
     const tempCtx = tempCanvas.getContext("2d");
     if (!tempCtx) return;
 
-    // Fill background
+    
     tempCtx.fillStyle = canvasBackground;
     tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
-    // Overlay shapes
+    
     tempCtx.drawImage(canvas, 0, 0);
 
     const link = document.createElement("a");
@@ -377,16 +377,16 @@ export default function Canvas({ roomId, adminId }: Props) {
       className="relative w-screen h-screen overflow-hidden"
       style={{ background: canvasBackground }}
     >
-      {/* Top Main Toolbar — closes hamburger menu on tool select */}
+      {}
       <Toolbar onToolSelect={() => setIsMenuOpen(false)} />
 
-      {/* Peer Cursors Overlay */}
+      {}
       <CursorOverlay cursorsRef={cursorsRef} camera={camera} />
 
-      {/* Left-side Floating Style Panel (hidden when hand, select, eraser, or menu is open) */}
+      {}
       {tool !== "hand" && tool !== "select" && tool !== "eraser" && !isMenuOpen && <StylePanel />}
 
-      {/* Hamburger Menu Toggle Button */}
+      {}
       <button
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="absolute top-4 left-4 z-20 w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors border cursor-pointer"
@@ -403,7 +403,7 @@ export default function Canvas({ roomId, adminId }: Props) {
 
 
 
-      {/* Menu Overlay */}
+      {}
       {isMenuOpen && (
         <div
           className="absolute top-16 left-4 z-20 w-64 rounded-xl p-5 space-y-4"
@@ -475,7 +475,7 @@ export default function Canvas({ roomId, adminId }: Props) {
             )}
           </div>
 
-          {/* Canvas Background preset controls */}
+          {}
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--text-secondary)' }}>
               Canvas Background
@@ -498,7 +498,7 @@ export default function Canvas({ roomId, adminId }: Props) {
             </div>
           </div>
 
-          {/* Show Grid Checkbox */}
+          {}
           <div className="flex justify-between items-center border-t pt-3.5" style={{ borderColor: 'var(--border)' }}>
             <span className="text-xs font-medium font-sans" style={{ color: 'var(--text-secondary)' }}>Show Grid</span>
             <input
@@ -512,9 +512,9 @@ export default function Canvas({ roomId, adminId }: Props) {
         </div>
       )}
 
-      {/* Bottom controls panel (Room name, Zoom & Undo/Redo) */}
+      {}
       <div className="absolute bottom-4 left-4 flex items-center gap-2.5 z-10">
-        {/* Room tag */}
+        {}
         <div
           className="text-xs px-3 py-1.5 rounded-lg flex items-center font-mono"
           style={{
@@ -526,7 +526,7 @@ export default function Canvas({ roomId, adminId }: Props) {
           Room: {roomId}
         </div>
 
-        {/* Connection status indicator */}
+        {}
         <div
           className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 border border-[var(--border)] bg-[var(--surface)] font-medium"
           style={{ color: connected ? "#22c55e" : "#f59e0b" }}
@@ -541,7 +541,7 @@ export default function Canvas({ roomId, adminId }: Props) {
           {connected ? "Live" : "Connecting..."}
         </div>
 
-        {/* Zoom controls */}
+        {}
         <div
           className="flex items-center rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--surface)] text-xs"
           style={{ height: "30px" }}
@@ -566,7 +566,7 @@ export default function Canvas({ roomId, adminId }: Props) {
           </button>
         </div>
 
-        {/* Undo / Redo controls */}
+        {}
         <div
           className="flex items-center rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--surface)] text-xs"
           style={{ height: "30px" }}

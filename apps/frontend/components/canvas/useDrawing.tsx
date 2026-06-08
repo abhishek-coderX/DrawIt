@@ -19,7 +19,7 @@ function screenToWorld(
   };
 }
 
-// ── Eraser & Selection Collision Utilities ────────────────────
+
 function distance(p1: { x: number; y: number }, p2: { x: number; y: number }) {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
@@ -39,7 +39,7 @@ function isPointNearLine(
 }
 
 function isPointNearShape(point: { x: number; y: number }, shape: Shape) {
-  const threshold = 12; // distance threshold in pixels
+  const threshold = 12; 
 
   if (shape.type === "rect") {
     const x1 = shape.x;
@@ -163,7 +163,7 @@ export function useDrawing(
   const pencilPoints = useRef<{ x: number; y: number }[]>([]);
   const activeShapeId = useRef<string>("");
   
-  // Track shape initial coordinates before drag-to-move starts
+  
   const initialShapePos = useRef<{
     x: number;
     y: number;
@@ -172,13 +172,13 @@ export function useDrawing(
     points?: { x: number; y: number }[];
   }>({ x: 0, y: 0 });
 
-  // Cache compiled rough.js drawables to avoid calculations flicker
+  
   const drawableCache = useRef<Map<string, any>>(new Map());
 
-  // ── Keyboard Undo/Redo Shortcuts ─────────────────────────────
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore key events when typing inside inputs or textareas
+      
       if (
         e.target instanceof HTMLTextAreaElement ||
         e.target instanceof HTMLInputElement
@@ -203,7 +203,7 @@ export function useDrawing(
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
 
-  // ── Render loop ──────────────────────────────────────────────
+  
   const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -213,27 +213,27 @@ export function useDrawing(
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Apply camera transform
+    
     ctx.save();
     ctx.setTransform(camera.scale, 0, 0, camera.scale, camera.x, camera.y);
 
-    // Draw grid
+    
     if (showGrid) {
       drawGrid(ctx, canvas, camera);
     }
 
-    // Draw all committed shapes (with cache check)
+    
     for (const shape of shapes) {
       if (shape.id === editingShapeId) continue;
       drawShape(rc, ctx, shape, generator, drawableCache.current);
     }
 
-    // Draw active shape (bypasses cache so it scales fluidly)
+    
     if (currentShape.current) {
       drawShape(rc, ctx, currentShape.current, generator, null);
     }
 
-    // Draw selection overlay for selected shape (rect/ellipse/line only)
+    
     if (tool === "select" && selectedShapeId) {
       const shape = shapes.find((s) => s.id === selectedShapeId);
       if (
@@ -254,7 +254,7 @@ export function useDrawing(
         );
         ctx.restore();
 
-        // Draw resize handle
+        
         const hx = shape.type === "line" ? (shape.width ?? 0) : shape.x + (shape.width ?? 0);
         const hy = shape.type === "line" ? (shape.height ?? 0) : shape.y + (shape.height ?? 0);
         const handleSize = 8 / camera.scale;
@@ -276,7 +276,7 @@ export function useDrawing(
     render();
   }, [render]);
 
-  // ── Resize handler ───────────────────────────────────────────
+  
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -290,12 +290,12 @@ export function useDrawing(
     return () => window.removeEventListener("resize", resize);
   }, [render]);
 
-  // ── Mouse events ─────────────────────────────────────────────
+  
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       const world = screenToWorld(e.clientX, e.clientY, camera);
 
-      // Middle click, Spacebar, or hand tool = pure pan
+      
       if (e.button === 1 || spacePressed || tool === "hand") {
         isPanning.current = true;
         panStart.current = { x: e.clientX - camera.x, y: e.clientY - camera.y };
@@ -652,7 +652,7 @@ export function useDrawing(
     pencilPoints.current = [];
   }, [onShapeComplete, tool]);
 
-  // ── Zoom (Native Non-Passive Listener) ──────────────────────
+  
   const cameraRef = useRef(camera);
   useEffect(() => {
     cameraRef.current = camera;
@@ -692,7 +692,7 @@ export function useDrawing(
   return { onMouseDown, onMouseMove, onMouseUp };
 }
 
-// ── Draw a single shape ───────────────────────────────────────
+
 function getOrCreateDrawable(
   shape: Shape,
   gen: any,
@@ -776,7 +776,7 @@ function drawShape(
   }
 }
 
-// ── Draw infinite grid ────────────────────────────────────────
+
 function drawGrid(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
@@ -785,7 +785,7 @@ function drawGrid(
   const gridSize = 40;
   const scaledGrid = gridSize * camera.scale;
 
-  // Prevent drawing extremely dense lines that degrade performance
+  
   if (scaledGrid < 12) return;
 
   const offsetX = camera.x % scaledGrid;
