@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), 'Geist Fallback';
+  
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+:root {
+  /* Warm earthy theme for DrawIt */
+  --background: #fefae0;
+  --foreground: #780000;
+
+  --card: #faedcd;
+  --card-foreground: #780000;
+
+  --popover: #faedcd;
+  --popover-foreground: #780000;
+
+  --primary: #d4a373;
+  --primary-foreground: #780000;
+
+  --secondary: #faedcd;
+  --secondary-foreground: #780000;
+
+  --muted: #faedcd;
+  --muted-foreground: #bc6c25;
+
+  --accent: #d4a373;
+  --accent-hover: #c1121f;
+  --accent-foreground: #780000;
+
+  --destructive: #c1121f;
+  --destructive-foreground: #fefae0;
+
+  --border: #ccd5ae;
+  --input: #faedcd;
+  --ring: #d4a373;
+
+  --radius: 0.5rem;
+
+  /* DrawIt Variable Bindings */
+  --bg: #fefae0;
+  --surface: #faedcd;
+  --text-primary: #780000;
+  --text-secondary: #bc6c25;
+  --accent: #d4a373;
+  --accent-hover: #c1121f;
+  --danger: #c1121f;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+::selection {
+  background: var(--primary);
+  color: white;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--background); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Custom Autofill Styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #faedcd inset !important;
+  -webkit-text-fill-color: #780000 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
