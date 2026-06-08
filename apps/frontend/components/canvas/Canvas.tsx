@@ -46,9 +46,11 @@ export default function Canvas({ roomId, adminId }: Props) {
   const params = useParams();
   const roomSlug = typeof params?.roomId === "string" ? params.roomId : roomId;
   const {
+    shapes,
     addShape,
     updateShape,
     setShapes,
+    removeShape,
     undo,
     redo,
     camera,
@@ -263,7 +265,7 @@ export default function Canvas({ roomId, adminId }: Props) {
         worldX: doubleClickedShape.x,
         worldY: doubleClickedShape.y,
       });
-      setTextValue(doubleClickedShape.text);
+      setTextValue(doubleClickedShape.text || "");
       setEditingShapeId(doubleClickedShape.id);
     }
   }, [camera, tool, shapes, setEditingShapeId]);
