@@ -61,6 +61,10 @@ export default function Canvas({ roomId, adminId }: Props) {
     setShowGrid,
     strokeColor,
     strokeWidth,
+    selectedShapeId,
+    setSelectedShapeId,
+    editingShapeId,
+    setEditingShapeId,
   } = useCanvasStore();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -170,28 +174,99 @@ export default function Canvas({ roomId, adminId }: Props) {
     setIsMenuOpen(false);
     if (tool !== "text") {
       setTextInput(null);
+      setEditingShapeId(null);
     }
-  }, [tool]);
+    if (tool !== "select") {
+      setSelectedShapeId(null);
+    }
+  }, [tool, setSelectedShapeId, setEditingShapeId]);
 
   const handleTextSubmit = (value: string) => {
-    if (!textInput || !value.trim()) {
-      setTextInput(null);
+    if (!textInput) {
+      setEditingShapeId(null);
       return;
     }
-    const shape: Shape = {
-      id: Math.random().toString(36).slice(2, 9),
-      type: "text",
-      x: textInput.worldX,
-      y: textInput.worldY,
-      text: value,
-      strokeColor,
-      strokeWidth,
-      roughness: 1,
-    };
-    addShape(shape);
-    broadcastShape(shape);
+
+    if (editingShapeId) {
+      if (value.trim()) {
+        const existingShape = shapes.find((s) => s.id === editingShapeId);
+        if (existingShape) {
+          const updatedShape = {
+            ...existingShape,
+            text: value,
+          };
+          updateShape(editingShapeId, { text: value });
+          broadcastShape(updatedShape);
+        }
+      } else {
+        removeShape(editingShapeId);
+        broadcastDeleteShape(editingShapeId);
+      }
+      setEditingShapeId(null);
+    } else {
+      if (value.trim()) {
+        const shape: Shape = {
+          id: Math.random().toString(36).slice(2, 9),
+          type: "text",
+          x: textInput.worldX,
+          y: textInput.worldY,
+          text: value,
+          strokeColor,
+          strokeWidth,
+          roughness: 1,
+        };
+        addShape(shape);
+        broadcastShape(shape);
+      }
+    }
     setTextInput(null);
   };
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (tool !== "select" && tool !== "text") return;
+
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    const world = {
+      x: (clientX - camera.x) / camera.scale,
+      y: (clientY - camera.y) / camera.scale,
+    };
+
+    const doubleClickedShape = useCanvasStore.getState().shapes.find((shape) => {
+      if (shape.type !== "text" || !shape.text) return false;
+      const width = shape.text.length * 10;
+      const height = 24;
+      const minX = Math.min(shape.x, shape.x + width);
+      const maxX = Math.max(shape.x, shape.x + width);
+      const minY = Math.min(shape.y, shape.y + height);
+      const maxY = Math.max(shape.y, shape.y + height);
+      const threshold = 15;
+      return (
+        world.x >= minX - threshold &&
+        world.x <= maxX + threshold &&
+        world.y >= minY - threshold &&
+        world.y <= maxY + threshold
+      );
+    });
+
+    if (doubleClickedShape) {
+      const screenX = doubleClickedShape.x * camera.scale + camera.x;
+      const screenY = doubleClickedShape.y * camera.scale + camera.y;
+
+      setTextInput({
+        x: screenX,
+        y: screenY,
+        worldX: doubleClickedShape.x,
+        worldY: doubleClickedShape.y,
+      });
+      setTextValue(doubleClickedShape.text);
+      setEditingShapeId(doubleClickedShape.id);
+    }
+  }, [camera, tool, shapes, setEditingShapeId]);
 
   const handleTextInputStart = useCallback(
     (x: number, y: number, worldX: number, worldY: number) => {
@@ -290,6 +365,10 @@ export default function Canvas({ roomId, adminId }: Props) {
       }
     }
   };
+
+  const editingShape = editingShapeId ? shapes.find((s) => s.id === editingShapeId) : null;
+  const activeColor = editingShape ? editingShape.strokeColor : strokeColor;
+  const activeWidth = editingShape ? editingShape.strokeWidth : strokeWidth;
 
   return (
     <div
@@ -511,21 +590,21 @@ export default function Canvas({ roomId, adminId }: Props) {
           ref={textareaRef}
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
-          className="absolute outline-none p-1.5 font-sans resize-none rounded-lg border shadow-sm"
+          className="absolute outline-none p-1.5 font-sans resize-none"
           style={{
             left: textInput.x,
             top: textInput.y,
-            fontSize: `${strokeWidth * 6 + 12}px`,
-            color: strokeColor === "#ffffff" ? "#780000" : strokeColor,
-            background: "var(--surface)",
-            borderColor: strokeColor === "#ffffff" ? "#ccd5ae" : strokeColor,
+            fontSize: `${(activeWidth * 6 + 12) * camera.scale}px`,
+            color: activeColor === "#ffffff" ? "#780000" : activeColor,
+            background: "transparent",
+            border: "none",
             fontFamily: "sans-serif",
             lineHeight: "1.2",
             zIndex: 50,
             minWidth: "150px",
             minHeight: "40px",
             overflow: "hidden",
-            caretColor: strokeColor === "#ffffff" ? "#780000" : strokeColor,
+            caretColor: activeColor === "#ffffff" ? "#780000" : activeColor,
           }}
           onBlur={() => handleTextSubmit(textValue)}
           onKeyDown={(e) => {
@@ -535,6 +614,7 @@ export default function Canvas({ roomId, adminId }: Props) {
               e.currentTarget.blur();
             }
             if (e.key === "Escape") {
+              setEditingShapeId(null);
               setTextInput(null);
             }
           }}
@@ -546,6 +626,7 @@ export default function Canvas({ roomId, adminId }: Props) {
 
       <canvas
         ref={canvasRef}
+        onDoubleClick={handleDoubleClick}
         onMouseDown={(e) => {
           setIsMouseDown(true);
           setIsMenuOpen(false);

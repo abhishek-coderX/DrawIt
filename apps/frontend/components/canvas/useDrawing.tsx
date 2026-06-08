@@ -95,6 +95,31 @@ function isPointNearShape(point: { x: number; y: number }, shape: Shape) {
   return false;
 }
 
+function getShapeBounds(shape: Shape) {
+  if (shape.type === "line") {
+    const x1 = shape.x;
+    const y1 = shape.y;
+    const x2 = shape.width ?? 0;
+    const y2 = shape.height ?? 0;
+    return {
+      minX: Math.min(x1, x2),
+      minY: Math.min(y1, y2),
+      maxX: Math.max(x1, x2),
+      maxY: Math.max(y1, y2),
+    };
+  }
+  const x1 = shape.x;
+  const y1 = shape.y;
+  const x2 = shape.x + (shape.width ?? 0);
+  const y2 = shape.y + (shape.height ?? 0);
+  return {
+    minX: Math.min(x1, x2),
+    minY: Math.min(y1, y2),
+    maxX: Math.max(x1, x2),
+    maxY: Math.max(y1, y2),
+  };
+}
+
 export function useDrawing(
   canvasRef: React.RefObject<HTMLCanvasElement>,
   onShapeComplete: (shape: Shape) => void,
@@ -118,11 +143,16 @@ export function useDrawing(
     undo,
     redo,
     showGrid,
+    selectedShapeId,
+    setSelectedShapeId,
+    editingShapeId,
+    setEditingShapeId,
   } = useCanvasStore();
 
   const isDrawing = useRef(false);
   const isPanning = useRef(false);
   const isMovingShape = useRef(false);
+  const isResizingShape = useRef(false);
   
   const startPos = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
@@ -194,6 +224,7 @@ export function useDrawing(
 
     // Draw all committed shapes (with cache check)
     for (const shape of shapes) {
+      if (shape.id === editingShapeId) continue;
       drawShape(rc, ctx, shape, generator, drawableCache.current);
     }
 
@@ -202,8 +233,44 @@ export function useDrawing(
       drawShape(rc, ctx, currentShape.current, generator, null);
     }
 
+    // Draw selection overlay for selected shape (rect/ellipse/line only)
+    if (tool === "select" && selectedShapeId) {
+      const shape = shapes.find((s) => s.id === selectedShapeId);
+      if (
+        shape &&
+        (shape.type === "rect" || shape.type === "ellipse" || shape.type === "line")
+      ) {
+        const bounds = getShapeBounds(shape);
+
+        ctx.save();
+        ctx.strokeStyle = "#3b82f6";
+        ctx.lineWidth = 1.5 / camera.scale;
+        ctx.setLineDash([4 / camera.scale, 4 / camera.scale]);
+        ctx.strokeRect(
+          bounds.minX,
+          bounds.minY,
+          bounds.maxX - bounds.minX,
+          bounds.maxY - bounds.minY
+        );
+        ctx.restore();
+
+        // Draw resize handle
+        const hx = shape.type === "line" ? (shape.width ?? 0) : shape.x + (shape.width ?? 0);
+        const hy = shape.type === "line" ? (shape.height ?? 0) : shape.y + (shape.height ?? 0);
+        const handleSize = 8 / camera.scale;
+
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#3b82f6";
+        ctx.lineWidth = 1.5 / camera.scale;
+        ctx.fillRect(hx - handleSize / 2, hy - handleSize / 2, handleSize, handleSize);
+        ctx.strokeRect(hx - handleSize / 2, hy - handleSize / 2, handleSize, handleSize);
+        ctx.restore();
+      }
+    }
+
     ctx.restore();
-  }, [shapes, camera, showGrid]);
+  }, [shapes, camera, showGrid, selectedShapeId, tool, editingShapeId]);
 
   useEffect(() => {
     render();
@@ -236,9 +303,38 @@ export function useDrawing(
       }
 
       if (tool === "select") {
+        if (selectedShapeId) {
+          const shape = shapes.find((s) => s.id === selectedShapeId);
+          if (
+            shape &&
+            (shape.type === "rect" || shape.type === "ellipse" || shape.type === "line")
+          ) {
+            const hx = shape.type === "line" ? (shape.width ?? 0) : shape.x + (shape.width ?? 0);
+            const hy = shape.type === "line" ? (shape.height ?? 0) : shape.y + (shape.height ?? 0);
+            const clickDist = Math.sqrt((world.x - hx) ** 2 + (world.y - hy) ** 2);
+            const handleThreshold = 12 / camera.scale;
+
+            if (clickDist < handleThreshold) {
+              saveToHistory();
+              isResizingShape.current = true;
+              selectedShape.current = shape;
+              dragStart.current = world;
+              initialShapePos.current = {
+                x: shape.x,
+                y: shape.y,
+                width: shape.width,
+                height: shape.height,
+                points: shape.points ? [...shape.points] : undefined,
+              };
+              return;
+            }
+          }
+        }
+
         const shape = shapes.find((s) => isPointNearShape(world, s));
         if (shape) {
           saveToHistory();
+          setSelectedShapeId(shape.id);
           isMovingShape.current = true;
           selectedShape.current = shape;
           dragStart.current = world;
@@ -250,6 +346,7 @@ export function useDrawing(
             points: shape.points ? [...shape.points] : undefined,
           };
         } else {
+          setSelectedShapeId(null);
           isPanning.current = true;
           panStart.current = { x: e.clientX - camera.x, y: e.clientY - camera.y };
         }
@@ -322,14 +419,40 @@ export function useDrawing(
         onCursorMove(world.x, world.y);
       }
 
-      if (isPanning.current || isMovingShape.current) {
+      if (isPanning.current || isMovingShape.current || isResizingShape.current) {
         if (canvasRef.current) {
-          canvasRef.current.style.cursor = "grabbing";
+          canvasRef.current.style.cursor = isPanning.current
+            ? "grabbing"
+            : isResizingShape.current
+            ? "nwse-resize"
+            : "grabbing";
         }
       } else if (tool === "select") {
-        const isHovering = shapes.some((s) => isPointNearShape(world, s));
-        if (canvasRef.current) {
-          canvasRef.current.style.cursor = isHovering ? "move" : "default";
+        let hoveringHandle = false;
+        if (selectedShapeId) {
+          const shape = shapes.find((s) => s.id === selectedShapeId);
+          if (
+            shape &&
+            (shape.type === "rect" || shape.type === "ellipse" || shape.type === "line")
+          ) {
+            const hx = shape.type === "line" ? (shape.width ?? 0) : shape.x + (shape.width ?? 0);
+            const hy = shape.type === "line" ? (shape.height ?? 0) : shape.y + (shape.height ?? 0);
+            const dist = Math.sqrt((world.x - hx) ** 2 + (world.y - hy) ** 2);
+            if (dist < 12 / camera.scale) {
+              hoveringHandle = true;
+            }
+          }
+        }
+
+        if (hoveringHandle) {
+          if (canvasRef.current) {
+            canvasRef.current.style.cursor = "nwse-resize";
+          }
+        } else {
+          const isHovering = shapes.some((s) => isPointNearShape(world, s));
+          if (canvasRef.current) {
+            canvasRef.current.style.cursor = isHovering ? "move" : "default";
+          }
         }
       }
 
@@ -342,43 +465,85 @@ export function useDrawing(
         return;
       }
 
-      if (isMovingShape.current && selectedShape.current) {
+      if (isResizingShape.current && selectedShape.current) {
         const dx = world.x - dragStart.current.x;
         const dy = world.y - dragStart.current.y;
+        const shapeId = selectedShape.current.id;
 
         setShapes(
           shapes.map((s) => {
-            if (s.id === selectedShape.current!.id) {
-              if (s.type === "pencil") {
-                const origPoints = initialShapePos.current.points || [];
-                return {
+            if (s.id === shapeId) {
+              if (s.type === "line") {
+                const updated = {
                   ...s,
-                  points: origPoints.map((p) => ({ x: p.x + dx, y: p.y + dy })),
-                  x: initialShapePos.current.x + dx,
-                  y: initialShapePos.current.y + dy,
-                };
-              } else if (s.type === "line") {
-                return {
-                  ...s,
-                  x: initialShapePos.current.x + dx,
-                  y: initialShapePos.current.y + dy,
                   width: (initialShapePos.current.width ?? 0) + dx,
                   height: (initialShapePos.current.height ?? 0) + dy,
                 };
+                delete (updated as any)._roughDrawable;
+                return updated;
               } else {
-                return {
+                const newWidth = Math.max(1, (initialShapePos.current.width ?? 0) + dx);
+                const newHeight = Math.max(1, (initialShapePos.current.height ?? 0) + dy);
+                const updated = {
                   ...s,
-                  x: initialShapePos.current.x + dx,
-                  y: initialShapePos.current.y + dy,
+                  width: newWidth,
+                  height: newHeight,
                 };
+                delete (updated as any)._roughDrawable;
+                return updated;
               }
             }
             return s;
           })
         );
 
-        // Delete from roughjs cache so drawable coordinates recalculate on redraw
-        drawableCache.current.delete(selectedShape.current.id);
+        drawableCache.current.delete(shapeId);
+        return;
+      }
+
+      if (isMovingShape.current && selectedShape.current) {
+        const dx = world.x - dragStart.current.x;
+        const dy = world.y - dragStart.current.y;
+        const shapeId = selectedShape.current.id;
+
+        setShapes(
+          shapes.map((s) => {
+            if (s.id === shapeId) {
+              if (s.type === "pencil") {
+                const origPoints = initialShapePos.current.points || [];
+                const updated = {
+                  ...s,
+                  points: origPoints.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+                  x: initialShapePos.current.x + dx,
+                  y: initialShapePos.current.y + dy,
+                };
+                delete (updated as any)._roughDrawable;
+                return updated;
+              } else if (s.type === "line") {
+                const updated = {
+                  ...s,
+                  x: initialShapePos.current.x + dx,
+                  y: initialShapePos.current.y + dy,
+                  width: (initialShapePos.current.width ?? 0) + dx,
+                  height: (initialShapePos.current.height ?? 0) + dy,
+                };
+                delete (updated as any)._roughDrawable;
+                return updated;
+              } else {
+                const updated = {
+                  ...s,
+                  x: initialShapePos.current.x + dx,
+                  y: initialShapePos.current.y + dy,
+                };
+                delete (updated as any)._roughDrawable;
+                return updated;
+              }
+            }
+            return s;
+          })
+        );
+
+        drawableCache.current.delete(shapeId);
         return;
       }
 
@@ -424,12 +589,41 @@ export function useDrawing(
 
       render();
     },
-    [tool, camera, strokeColor, strokeWidth, fillColor, fillStyle, render, shapes, removeShape, setCamera, setShapes, onCursorMove, onShapeDelete]
+    [
+      tool,
+      camera,
+      strokeColor,
+      strokeWidth,
+      fillColor,
+      fillStyle,
+      render,
+      shapes,
+      removeShape,
+      setCamera,
+      setShapes,
+      onCursorMove,
+      onShapeDelete,
+      selectedShapeId,
+    ]
   );
 
   const onMouseUp = useCallback(() => {
     if (isPanning.current) {
       isPanning.current = false;
+      return;
+    }
+
+    if (isResizingShape.current) {
+      isResizingShape.current = false;
+      if (selectedShape.current) {
+        const updated = useCanvasStore
+          .getState()
+          .shapes.find((s) => s.id === selectedShape.current!.id);
+        if (updated) {
+          onShapeComplete(updated);
+        }
+      }
+      selectedShape.current = null;
       return;
     }
     

@@ -36,6 +36,8 @@ interface CanvasStore {
   fillStyle: "none" | "hachure" | "solid";
   canvasBackground: string;
   showGrid: boolean;
+  selectedShapeId: string | null;
+  editingShapeId: string | null;
   setTool: (tool: Tool) => void;
   setShapes: (shapes: Shape[]) => void;
   addShape: (shape: Shape) => void;
@@ -47,6 +49,8 @@ interface CanvasStore {
   setFillStyle: (style: "none" | "hachure" | "solid") => void;
   setCanvasBackground: (color: string) => void;
   setShowGrid: (show: boolean) => void;
+  setSelectedShapeId: (id: string | null) => void;
+  setEditingShapeId: (id: string | null) => void;
   saveToHistory: () => void;
   undo: () => void;
   redo: () => void;
@@ -65,6 +69,8 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
   fillStyle: "none",
   canvasBackground: "#fefae0",
   showGrid: true,
+  selectedShapeId: null,
+  editingShapeId: null,
   setTool: (tool) => set({ tool }),
   setShapes: (shapes) => set({ shapes, past: [], future: [] }),
   addShape: (shape) =>
@@ -86,6 +92,8 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
   setFillStyle: (fillStyle) => set({ fillStyle }),
   setCanvasBackground: (canvasBackground) => set({ canvasBackground }),
   setShowGrid: (showGrid) => set({ showGrid }),
+  setSelectedShapeId: (selectedShapeId) => set({ selectedShapeId }),
+  setEditingShapeId: (editingShapeId) => set({ editingShapeId }),
   saveToHistory: () =>
     set((s) => ({
       past: [...s.past, s.shapes],
