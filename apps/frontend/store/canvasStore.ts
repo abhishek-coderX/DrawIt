@@ -61,7 +61,7 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
   shapes: [],
   past: [],
   future: [],
-  tool: "rect",
+  tool: "select",
   camera: { x: 0, y: 0, scale: 1 },
   strokeColor: "#780000",
   strokeWidth: 2,

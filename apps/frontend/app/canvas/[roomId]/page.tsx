@@ -16,7 +16,6 @@ export default function CanvasPage() {
 
   useEffect(() => {
     if (!isLoggedIn()) {
-      // Redirect to signin and then come back to this canvas URL after login
       router.push(`/signin?redirect=/canvas/${roomId}`);
       return;
     }

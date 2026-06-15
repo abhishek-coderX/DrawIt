@@ -16,7 +16,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const { isLoggedIn, clearToken } = useAuth();
   const [roomName, setRoomName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [joinLoading, setJoinLoading] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
   const [newRoomName, setNewRoomName] = useState("");
@@ -50,7 +51,7 @@ export default function DashboardPage() {
       toast.error("Room name must be at least 3 characters");
       return;
     }
-    setLoading(true);
+    setCreateLoading(true);
     try {
       const res = await api.post("/room", { name: roomName });
       if (res.data.roomId) {
@@ -62,7 +63,7 @@ export default function DashboardPage() {
     } catch (err: any) {
       toast.error(err.response?.data?.message ?? "Error creating room");
     } finally {
-      setLoading(false);
+      setCreateLoading(false);
     }
   };
 
@@ -71,7 +72,7 @@ export default function DashboardPage() {
       toast.error("Room name must be at least 3 characters");
       return;
     }
-    setLoading(true);
+    setJoinLoading(true);
     try {
       const res = await api.get(`/room/${roomName}`);
       if (res.data.room?.id) {
@@ -83,7 +84,7 @@ export default function DashboardPage() {
     } catch {
       toast.error("Error joining room");
     } finally {
-      setLoading(false);
+      setJoinLoading(false);
     }
   };
 
@@ -192,7 +193,7 @@ export default function DashboardPage() {
             <div className="flex gap-3">
               <button
                 onClick={handleCreateRoom}
-                disabled={loading}
+                disabled={createLoading || joinLoading}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] duration-200 cursor-pointer"
                 style={{ background: '#d4a373', color: '#780000' }}
                 onMouseEnter={e => {
@@ -204,11 +205,11 @@ export default function DashboardPage() {
                   e.currentTarget.style.color = '#780000';
                 }}
               >
-                {loading ? "Creating..." : "Create Room"}
+                {createLoading ? "Creating..." : "Create Room"}
               </button>
               <button
                 onClick={handleJoinRoom}
-                disabled={loading}
+                disabled={createLoading || joinLoading}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] duration-200 cursor-pointer"
                 style={{ background: 'transparent', borderColor: '#ccd5ae', color: '#780000' }}
                 onMouseEnter={e => {
@@ -220,7 +221,7 @@ export default function DashboardPage() {
                   e.currentTarget.style.background = 'transparent';
                 }}
               >
-                {loading ? "Joining..." : "Join Room"}
+                {joinLoading ? "Joining..." : "Join Room"}
               </button>
             </div>
           </div>

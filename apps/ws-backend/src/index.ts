@@ -6,6 +6,14 @@ import Redis from "ioredis";
 import dotenv from "dotenv";
 dotenv.config();
 
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception thrown:", err);
+});
+
 const REDIS_URL = process.env.REDIS_URL!;
 const pub = new Redis(REDIS_URL);
 const sub = new Redis(REDIS_URL);
@@ -61,10 +69,15 @@ wss.on("connection", function connection(ws, request) {
 
   ws.on("message", async function message(data) {
     let parsedData;
-    if (typeof data !== "string") {
-      parsedData = JSON.parse(data.toString());
-    } else {
-      parsedData = JSON.parse(data);
+    try {
+      if (typeof data !== "string") {
+        parsedData = JSON.parse(data.toString());
+      } else {
+        parsedData = JSON.parse(data);
+      }
+    } catch (e) {
+      console.error("Failed to parse incoming WebSocket message:", e);
+      return;
     }
 
     // ── Ping ─────────────────────────────────────────────────
@@ -160,17 +173,21 @@ wss.on("connection", function connection(ws, request) {
     // ── Clear canvas ──────────────────────────────────────────
     if (parsedData.type === "clear_canvas") {
       const { roomId } = parsedData;
-      const room = await prismaClient.room.findFirst({
-        where: { id: Number(roomId) }
-      });
-      if (room && room.adminId === userId) {
-        await prismaClient.shape.deleteMany({
-          where: { roomId: Number(roomId) },
+      try {
+        const room = await prismaClient.room.findFirst({
+          where: { id: Number(roomId) }
         });
-        pub.publish(
-          `room:${roomId}`,
-          JSON.stringify({ type: "clear_canvas", roomId })
-        );
+        if (room && room.adminId === userId) {
+          await prismaClient.shape.deleteMany({
+            where: { roomId: Number(roomId) },
+          });
+          pub.publish(
+            `room:${roomId}`,
+            JSON.stringify({ type: "clear_canvas", roomId })
+          );
+        }
+      } catch (e) {
+        console.error("Failed to clear canvas from DB:", e);
       }
       return;
     }
@@ -187,35 +204,43 @@ wss.on("connection", function connection(ws, request) {
         console.error("Failed to parse shape JSON:", e);
       }
 
-      if (shapeId) {
-        const existing = await prismaClient.shape.findFirst({
-          where: {
-            roomId: Number(roomId),
-            message: { contains: `"id":"${shapeId}"` },
-          },
-        });
-
-        if (existing) {
-          await prismaClient.shape.update({
-            where: { id: existing.id },
-            data: { message },
+      try {
+        if (shapeId) {
+          const existing = await prismaClient.shape.findFirst({
+            where: {
+              roomId: Number(roomId),
+              message: { contains: `"id":"${shapeId}"` },
+            },
           });
+
+          if (existing) {
+            await prismaClient.shape.update({
+              where: { id: existing.id },
+              data: { message },
+            });
+          } else {
+            await prismaClient.shape.create({
+              data: { roomId: Number(roomId), message, userId },
+            });
+          }
         } else {
           await prismaClient.shape.create({
             data: { roomId: Number(roomId), message, userId },
           });
         }
-      } else {
-        await prismaClient.shape.create({
-          data: { roomId: Number(roomId), message, userId },
-        });
+      } catch (e) {
+        console.error("Failed to persist shape to DB:", e);
       }
 
       // Publish to Redis — reaches ALL server instances
-      pub.publish(
-        `room:${roomId}`,
-        JSON.stringify({ type: "chat", message, roomId })
-      );
+      try {
+        pub.publish(
+          `room:${roomId}`,
+          JSON.stringify({ type: "chat", message, roomId })
+        );
+      } catch (e) {
+        console.error("Failed to publish shape message to Redis:", e);
+      }
       return;
     }
   });

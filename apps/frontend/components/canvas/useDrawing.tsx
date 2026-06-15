@@ -120,6 +120,45 @@ function getShapeBounds(shape: Shape) {
   };
 }
 
+function getShapeArea(shape: Shape): number {
+  if (shape.type === "pencil") {
+    if (!shape.points || shape.points.length === 0) return 0;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of shape.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    return (maxX - minX) * (maxY - minY);
+  }
+  const bounds = getShapeBounds(shape);
+  const w = bounds.maxX - bounds.minX;
+  const h = bounds.maxY - bounds.minY;
+  return w * h;
+}
+
+function findBestShapeAtPoint(point: { x: number; y: number }, shapes: Shape[]): Shape | undefined {
+  const matching = shapes.filter((s) => isPointNearShape(point, s));
+  if (matching.length === 0) return undefined;
+  if (matching.length === 1) return matching[0];
+
+  const sorted = [...matching].sort((a, b) => {
+    const areaA = getShapeArea(a);
+    const areaB = getShapeArea(b);
+    const maxArea = Math.max(areaA, areaB);
+    if (maxArea > 0) {
+      const diffRatio = Math.min(areaA, areaB) / maxArea;
+      if (diffRatio < 0.8) {
+        return areaA - areaB; // smaller area first
+      }
+    }
+    // standard layering order: topmost shape first (higher index in original array)
+    return shapes.indexOf(b) - shapes.indexOf(a);
+  });
+  return sorted[0];
+}
+
 export function useDrawing(
   canvasRef: React.RefObject<HTMLCanvasElement>,
   onShapeComplete: (shape: Shape) => void,
@@ -331,7 +370,7 @@ export function useDrawing(
           }
         }
 
-        const shape = shapes.find((s) => isPointNearShape(world, s));
+        const shape = findBestShapeAtPoint(world, shapes);
         if (shape) {
           saveToHistory();
           setSelectedShapeId(shape.id);
@@ -355,7 +394,7 @@ export function useDrawing(
 
       if (tool === "eraser") {
         isDrawing.current = true;
-        const shapeToErase = shapes.find((shape) => isPointNearShape(world, shape));
+        const shapeToErase = findBestShapeAtPoint(world, shapes);
         if (shapeToErase) {
           removeShape(shapeToErase.id);
           if (onShapeDelete) {
@@ -550,7 +589,7 @@ export function useDrawing(
       if (!isDrawing.current) return;
 
       if (tool === "eraser") {
-        const shapeToErase = shapes.find((shape) => isPointNearShape(world, shape));
+        const shapeToErase = findBestShapeAtPoint(world, shapes);
         if (shapeToErase) {
           removeShape(shapeToErase.id);
           if (onShapeDelete) {
@@ -647,10 +686,50 @@ export function useDrawing(
     if (tool === "eraser") return;
 
     if (!currentShape.current) return;
-    onShapeComplete(currentShape.current);
+
+    // Discard tiny shapes/accidental clicks (width/height less than 5px)
+    const shape = currentShape.current;
+    let isTooSmall = false;
+    
+    if (shape.type === "rect" || shape.type === "ellipse") {
+      const w = Math.abs(shape.width ?? 0);
+      const h = Math.abs(shape.height ?? 0);
+      if (w < 5 && h < 5) {
+        isTooSmall = true;
+      }
+    } else if (shape.type === "line") {
+      const dx = (shape.width ?? 0) - shape.x;
+      const dy = (shape.height ?? 0) - shape.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 5) {
+        isTooSmall = true;
+      }
+    } else if (shape.type === "pencil") {
+      if (!shape.points || shape.points.length <= 1) {
+        isTooSmall = true;
+      } else {
+        const start = shape.points[0];
+        const allClose = shape.points.every((p) => {
+          const dx = p.x - start.x;
+          const dy = p.y - start.y;
+          return Math.sqrt(dx * dx + dy * dy) < 5;
+        });
+        if (allClose) {
+          isTooSmall = true;
+        }
+      }
+    }
+
+    if (isTooSmall) {
+      currentShape.current = null;
+      pencilPoints.current = [];
+      render();
+      return;
+    }
+
+    onShapeComplete(shape);
     currentShape.current = null;
     pencilPoints.current = [];
-  }, [onShapeComplete, tool]);
+  }, [onShapeComplete, tool, render]);
 
   
   const cameraRef = useRef(camera);

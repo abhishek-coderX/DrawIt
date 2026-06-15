@@ -219,6 +219,9 @@ export default function Canvas({ roomId, adminId }: Props) {
         };
         addShape(shape);
         broadcastShape(shape);
+        // Automatically switch to select tool and select the new text node
+        useCanvasStore.getState().setTool("select");
+        useCanvasStore.getState().setSelectedShapeId(shape.id);
       }
     }
     setTextInput(null);
@@ -284,6 +287,9 @@ export default function Canvas({ roomId, adminId }: Props) {
       updateShape(shape.id, shape);
     } else {
       addShape(shape);
+      // Automatically switch to select tool and select the new shape
+      useCanvasStore.getState().setTool("select");
+      useCanvasStore.getState().setSelectedShapeId(shape.id);
     }
     broadcastShape(shape);
   };

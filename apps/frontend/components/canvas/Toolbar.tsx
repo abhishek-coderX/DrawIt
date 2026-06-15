@@ -2,8 +2,8 @@
 import { useCanvasStore, Tool } from "@/store/canvasStore";
 
 const tools: { id: Tool; label: string; icon: string }[] = [
-  { id: "hand", label: "Pan canvas (✋)", icon: "✋" },
-  { id: "select", label: "Select & move shape", icon: "⬆" },
+  { id: "hand", label: "Pan / Hand tool", icon: "✋" },
+  { id: "select", label: "Select & move shape", icon: "⬈" },
   { id: "rect", label: "Rectangle", icon: "▭" },
   { id: "ellipse", label: "Ellipse", icon: "◯" },
   { id: "line", label: "Line", icon: "╱" },

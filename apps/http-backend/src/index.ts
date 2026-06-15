@@ -9,7 +9,15 @@ import cors from "cors";
 
 const app = express();
 app.use(express.json());
-app.use(cors())
+app.use(cors());
+
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception thrown:", err);
+});
 
 app.post("/signup", async (req, res) => {
 
@@ -34,8 +42,9 @@ app.post("/signup", async (req, res) => {
             userId: user.id
         })
     } catch(e) {
+        console.error("Signup error details:", e);
         res.status(411).json({
-            message: "User already exists with this username"
+            message: "User already exists with this email"
         })
     }
 })
@@ -49,34 +58,41 @@ app.post("/signin", async (req, res) => {
         return;
     }
 
-    const user = await prismaClient.user.findFirst({
-        where: {
-            email: parsedData.data.username
+    try {
+        const user = await prismaClient.user.findFirst({
+            where: {
+                email: parsedData.data.username
+            }
+        })
+
+        if (!user) {
+            res.status(403).json({
+                message: "Not authorized"
+            })
+            return;
         }
-    })
 
-    if (!user) {
-        res.status(403).json({
-            message: "Not authorized"
+        const isValidPassword = await bcrypt.compare(parsedData.data.password, user.password);
+        if (!isValidPassword) {
+            res.status(403).json({
+                message: "Not authorized"
+            })
+            return;
+        }
+
+        const token = jwt.sign({
+            userId: user?.id
+        }, JWT_SECRET);
+
+        res.json({
+            token
         })
-        return;
-    }
-
-    const isValidPassword = await bcrypt.compare(parsedData.data.password, user.password);
-    if (!isValidPassword) {
-        res.status(403).json({
-            message: "Not authorized"
+    } catch(e) {
+        console.error("Signin error:", e);
+        res.status(500).json({
+            message: "Internal server error"
         })
-        return;
     }
-
-    const token = jwt.sign({
-        userId: user?.id
-    }, JWT_SECRET);
-
-    res.json({
-        token
-    })
 })
 
 app.post("/room", middleware, async (req, res) => {
@@ -91,9 +107,10 @@ app.post("/room", middleware, async (req, res) => {
     const userId = req.userId;
 
     try {
+        const normalizedSlug = parsedData.data.name.trim().toLowerCase().replace(/\s+/g, "-");
         const room = await prismaClient.room.create({
             data: {
-                slug: parsedData.data.name,
+                slug: normalizedSlug,
                 adminId: userId
             }
         })
@@ -102,6 +119,7 @@ app.post("/room", middleware, async (req, res) => {
             roomId: room.id
         })
     } catch(e) {
+        console.error("Room creation error:", e);
         res.status(411).json({
             message: "Room already exists with this name"
         })
@@ -172,16 +190,23 @@ app.delete("/chats/:roomId", middleware, async (req, res) => {
 })
 
 app.get("/room/:slug", async (req, res) => {
-    const slug = req.params.slug;
-    const room = await prismaClient.room.findFirst({
-        where: {
-            slug
-        }
-    });
+    try {
+        const slug = req.params.slug.trim().toLowerCase().replace(/\s+/g, "-");
+        const room = await prismaClient.room.findFirst({
+            where: {
+                slug
+            }
+        });
 
-    res.json({
-        room
-    })
+        res.json({
+            room
+        })
+    } catch(e) {
+        console.error("Error fetching room slug:", e);
+        res.status(500).json({
+            message: "Failed to load room details"
+        })
+    }
 })
 
 app.get("/user/me", middleware, async (req, res) => {
@@ -336,4 +361,4 @@ app.get("/rooms", middleware, async (req, res) => {
     }
 });
 
-app.listen(3001);
+app.listen(process.env.PORT ? Number(process.env.PORT) : 3001);

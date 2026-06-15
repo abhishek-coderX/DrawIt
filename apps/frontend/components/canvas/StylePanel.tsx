@@ -6,6 +6,7 @@ const fillColors = ["#6366f1", "#f43f5e", "#22c55e", "#f59e0b", "#38bdf8", "#0a0
 
 export default function StylePanel() {
   const {
+    tool,
     strokeColor,
     setStrokeColor,
     strokeWidth,
@@ -15,6 +16,8 @@ export default function StylePanel() {
     fillStyle,
     setFillStyle,
   } = useCanvasStore();
+
+  const showFill = tool === "rect" || tool === "ellipse";
 
   return (
     <div
@@ -46,54 +49,58 @@ export default function StylePanel() {
         </div>
       </div>
 
-      {/* Fill Style */}
-      <div className="space-y-1.5">
-        <label className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-secondary)]">
-          Fill Style
-        </label>
-        <div className="flex gap-1.5 rounded-lg p-0.5 bg-[var(--bg)] border border-[var(--border)]">
-          {[
-            { id: "none", label: "Outline" },
-            { id: "hachure", label: "Hachure" },
-            { id: "solid", label: "Solid" },
-          ].map((style) => (
-            <button
-              key={style.id}
-              onClick={() => setFillStyle(style.id as any)}
-              className="flex-1 py-1 text-[10px] font-medium rounded-md transition-colors"
-              style={{
-                background: fillStyle === style.id ? "var(--surface)" : "transparent",
-                color: fillStyle === style.id ? "var(--text-primary)" : "var(--text-secondary)",
-                border: fillStyle === style.id ? "1px solid var(--border)" : "1px solid transparent",
-              }}
-            >
-              {style.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Fill Color (only if fill style is hachure or solid) */}
-      {fillStyle !== "none" && (
-        <div className="space-y-1.5 transition-all">
-          <label className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-secondary)]">
-            Background / Fill Color
-          </label>
-          <div className="grid grid-cols-6 gap-2">
-            {fillColors.map((c) => (
-              <button
-                key={c}
-                onClick={() => setFillColor(c)}
-                className="w-6 h-6 rounded-md border border-white/5 transition-transform hover:scale-105"
-                style={{
-                  background: c,
-                  outline: fillColor === c ? "2px solid var(--primary)" : "none",
-                  outlineOffset: "1px",
-                }}
-              />
-            ))}
+      {showFill && (
+        <>
+          {/* Fill Style */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-secondary)]">
+              Fill Style
+            </label>
+            <div className="flex gap-1.5 rounded-lg p-0.5 bg-[var(--bg)] border border-[var(--border)]">
+              {[
+                { id: "none", label: "Outline" },
+                { id: "hachure", label: "Hachure" },
+                { id: "solid", label: "Solid" },
+              ].map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => setFillStyle(style.id as any)}
+                  className="flex-1 py-1 text-[10px] font-medium rounded-md transition-colors"
+                  style={{
+                    background: fillStyle === style.id ? "var(--surface)" : "transparent",
+                    color: fillStyle === style.id ? "var(--text-primary)" : "var(--text-secondary)",
+                    border: fillStyle === style.id ? "1px solid var(--border)" : "1px solid transparent",
+                  }}
+                >
+                  {style.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+
+          {/* Fill Color (only if fill style is hachure or solid) */}
+          {fillStyle !== "none" && (
+            <div className="space-y-1.5 transition-all">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-secondary)]">
+                Background / Fill Color
+              </label>
+              <div className="grid grid-cols-6 gap-2">
+                {fillColors.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setFillColor(c)}
+                    className="w-6 h-6 rounded-md border border-white/5 transition-transform hover:scale-105"
+                    style={{
+                      background: c,
+                      outline: fillColor === c ? "2px solid var(--primary)" : "none",
+                      outlineOffset: "1px",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Stroke Width */}
