@@ -1,7 +1,7 @@
-const JWT_SECRET = process.env.JWT_SECRET;
+const secret = process.env.JWT_SECRET;
 
-if (!JWT_SECRET) {
+if (!secret) {
   throw new Error("JWT_SECRET is not defined");
 }
 
-export { JWT_SECRET };
+export const JWT_SECRET = secret;
