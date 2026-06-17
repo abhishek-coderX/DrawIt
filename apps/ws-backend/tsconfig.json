@@ -5,12 +5,8 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@repo/backend-common/config": ["../../packages/backend-common/src/index.ts"],
-      "@repo/db": ["../../packages/db/src/index.ts"]
+      "@repo/backend-common/config": ["../../packages/backend-common/dist/index.d.ts"],
+      "@repo/db": ["../../packages/db/dist/index.d.ts"]
     }
-  },
-  "references": [
-    { "path": "../../packages/db" },
-    { "path": "../../packages/backend-common" }
-  ]
+  }
 }
