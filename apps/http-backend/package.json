@@ -8,6 +8,8 @@
     "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
+    "@repo/backend-common": "workspace:*",
+    "@repo/common": "workspace:*",
     "@repo/db": "workspace:*",
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.7",
@@ -17,8 +19,6 @@
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
-    "@repo/backend-common": "workspace:*",
-    "@repo/common": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/bcryptjs": "^3.0.0",
     "@types/express": "^5.0.0"
