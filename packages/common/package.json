@@ -10,7 +10,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {

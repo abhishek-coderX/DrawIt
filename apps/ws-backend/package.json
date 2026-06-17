@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --external:@prisma/client",
+    "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --external:@prisma/client --external:@repo/backend-common --external:@repo/db",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts"
   },

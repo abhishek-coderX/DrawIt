@@ -44,3 +44,6 @@ ROADMAP.md
 DrawIt_Complete_Documentation.docx
 *.docx
 
+# TypeScript build caching info
+*.tsbuildinfo
+
