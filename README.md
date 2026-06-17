@@ -264,7 +264,7 @@ model Shape {
 
 
 <div align="center">
-  Built with ❤️ for learning and resume projects
+  Built with ❤️ by Abhishek
   <br/>
   <a href="https://draw-it-frontend-peach.vercel.app">Live Demo</a> •
   <a href="https://github.com/abhishek-coderX/DrawIt">GitHub</a>
