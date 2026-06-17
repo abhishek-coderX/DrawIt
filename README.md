@@ -262,19 +262,6 @@ model Shape {
 
 ---
 
-## 🎯 Resume Highlights
-
-- Built a **real-time collaborative whiteboard** with live cursor presence, infinite canvas pan/zoom at 60fps via viewport transform matrix, and WebSocket sync across peers — achieving zero React re-renders during drawing using requestAnimationFrame with ref-based state
-- Scaled **WebSocket broadcasting horizontally using Redis Pub/Sub** (ioredis), decoupling real-time events from server instance memory, with an offline-resilient client featuring exponential backoff reconnection and shape queue buffering
-- Engineered **full-stack monorepo** (Turborepo + pnpm) with JWT auth, bcrypt, admin-protected room actions, Command pattern Undo/Redo, optimistic UI with deduplication, and PostgreSQL shape persistence via Prisma
-
----
-
-## 📄 License
-
-MIT License — feel free to use this project as a reference or starting point.
-
----
 
 <div align="center">
   Built with ❤️ for learning and resume projects
